@@ -110,7 +110,8 @@ class regressor:
 
         logger = self.logger
         caffe.set_mode_gpu()
-        caffe.set_device(int(gpu_id))
+        #caffe.set_mode_cpu()
+        #caffe.set_device(int(gpu_id))
         if do_train == True:
             logger.info('Setting phase to train')
             # TODO: this part of the code needs to be changed for
@@ -118,7 +119,27 @@ class regressor:
             if self.solver_file:
                 self.solver = caffe.SGDSolver(self.solver_file)
                 net = self.solver.net
-                net.copy_from(caffe_model)
+                #net.copy_from(caffe_model)
+                keys=[*net.params]
+                innet = caffe.Net('/home/hadjoutsaidctb/PY-GOTURN/nets/tracker1.prototxt', caffe_model, caffe.TEST)
+                #for i in keys:
+                #    print(i)
+                #    print('\n')
+               # print('#################################################')
+               # print('#################################################')
+               # print(net.__dict__)
+               # raise SystemExit()
+                for key in keys[:-4]:
+                    if not key[0]=='p':
+                        new_key='p_'+key
+                        if net.params[new_key] and net.params[key] and innet.params[key]: 
+                            net.params[new_key][0].data[...]=innet.params[key][0].data[...]
+                            net.params[new_key][1].data[...]=innet.params[key][1].data[...]
+                            net.params[key][0].data[...]=innet.params[key][0].data[...]
+                            net.params[key][1].data[...]=innet.params[key][1].data[...]
+                        else:
+                            print('nwe key doesnt exist')
+                            raise SystemExit()
             else:
                 logger.error('solver file required')
                 return
@@ -128,6 +149,7 @@ class regressor:
             logger.info('Setting phase to test')
             net = caffe.Net(deploy_proto, caffe_model, caffe.TEST)
             self.phase = caffe.TEST
+
 
         self.net = net
         self.num_inputs = net.blobs['image'].data[...].shape[0]
